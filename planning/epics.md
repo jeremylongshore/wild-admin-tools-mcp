@@ -1,5 +1,7 @@
-# Epics
+# Epic Plan Reference
 
-Epic breakdown for wild-admin-tools-mcp. To be populated during planning phase.
+The canonical 10-epic build plan for this repo is filed at:
 
-This repo will be broken into 10 epics with child tasks and dependency blocks.
+`000-docs/002-PP-PLAN-epic-build-plan.md`
+
+This file is a pointer only. Do not duplicate the plan here.
