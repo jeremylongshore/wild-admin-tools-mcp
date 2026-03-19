@@ -32,6 +32,12 @@ require_relative 'wild_admin_tools_mcp/identity/identity_extractor'
 require_relative 'wild_admin_tools_mcp/identity/gate_client'
 require_relative 'wild_admin_tools_mcp/identity/gate_health_check'
 require_relative 'wild_admin_tools_mcp/identity/authenticated_pipeline'
+require_relative 'wild_admin_tools_mcp/server/response_formatter'
+require_relative 'wild_admin_tools_mcp/server/tool_handler'
+require_relative 'wild_admin_tools_mcp/server/tools/manage_background_jobs'
+require_relative 'wild_admin_tools_mcp/server/tools/manage_cache'
+require_relative 'wild_admin_tools_mcp/server/tools/manage_feature_flags'
+require_relative 'wild_admin_tools_mcp/server/server_factory'
 
 module WildAdminToolsMcp
   class << self
