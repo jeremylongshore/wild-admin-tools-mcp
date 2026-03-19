@@ -45,10 +45,18 @@ planning/               # Active planning artifacts
 ## Build Commands
 
 ```bash
-bundle install          # Install dependencies
+bundle install          # Install dependencies (uses git-based wild-capability-gate)
 bundle exec rspec       # Run test suite
 bundle exec rubocop     # Lint
 ```
+
+## Dependency Strategy
+
+`wild-capability-gate` uses a dual-mode resolution in Gemfile:
+- **Default (CI + production):** fetched from GitHub via git
+- **Local dev:** set `USE_LOCAL_CAPABILITY_GATE=true` to use `../wild-capability-gate`
+
+Path dependencies are never used in CI. This ensures reproducible builds everywhere.
 
 ## Testing Approach
 

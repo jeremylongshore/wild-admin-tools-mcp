@@ -1,0 +1,27 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require 'bundler/setup'
+require 'mcp'
+require 'mcp/server/transports/stdio_transport'
+require 'wild_admin_tools_mcp'
+
+gate = WildAdminToolsMcp.configuration.gate
+policy_path = ENV.fetch('WILD_POLICY_PATH', File.expand_path('../../config/action_policy.yml', __dir__))
+policy_config = WildAdminToolsMcp::Guard::PolicyConfig.from_yaml(policy_path)
+caller_id = ENV.fetch('WILD_CALLER_ID', 'mcp-stdio')
+
+pipeline = WildAdminToolsMcp::Server::ServerFactory.build_pipeline(
+  gate: gate,
+  policy_config: policy_config
+)
+
+server_context = WildAdminToolsMcp::Server::ServerFactory.build_server_context(
+  pipeline: pipeline,
+  caller_id: caller_id
+)
+
+server = WildAdminToolsMcp::Server::ServerFactory.create(server_context: server_context)
+transport = MCP::Server::Transports::StdioTransport.new(server)
+server.transport = transport
+transport.open

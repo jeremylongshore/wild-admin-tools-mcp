@@ -70,6 +70,16 @@ See `000-docs/003-TQ-STND-safety-model.md` for the full governing specification.
 | `wild-rails-safe-introspection-mcp` | Read-only companion — shares MCP patterns, not code |
 | `wild-capability-gate` | Mandatory runtime dependency — gates all operations |
 
+## Local Development with wild-capability-gate
+
+By default, `wild-capability-gate` is fetched from GitHub (git-based dependency). For local development with a sibling checkout:
+
+```bash
+USE_LOCAL_CAPABILITY_GATE=true bundle install
+```
+
+This resolves the gem from `../wild-capability-gate` instead. CI always uses the git-based dependency.
+
 ## License
 
 Intent Solutions Proprietary. See `LICENSE`.

@@ -34,6 +34,7 @@ RSpec/DescribeClass:
   Exclude:
     - "spec/safety/**/*"
     - "spec/wild_admin_tools_mcp/guard/integration_spec.rb"
+    - "spec/wild_admin_tools_mcp/server/integration_spec.rb"
 
 RSpec/MultipleMemoizedHelpers:
   Max: 10
