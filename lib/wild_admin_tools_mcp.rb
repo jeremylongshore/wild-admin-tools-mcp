@@ -27,6 +27,11 @@ require_relative 'wild_admin_tools_mcp/audit/parameter_sanitizer'
 require_relative 'wild_admin_tools_mcp/audit/store'
 require_relative 'wild_admin_tools_mcp/audit/recorder'
 require_relative 'wild_admin_tools_mcp/audit/audited_pipeline'
+require_relative 'wild_admin_tools_mcp/identity/session_context'
+require_relative 'wild_admin_tools_mcp/identity/identity_extractor'
+require_relative 'wild_admin_tools_mcp/identity/gate_client'
+require_relative 'wild_admin_tools_mcp/identity/gate_health_check'
+require_relative 'wild_admin_tools_mcp/identity/authenticated_pipeline'
 
 module WildAdminToolsMcp
   class << self
