@@ -48,8 +48,8 @@ The safety model implies specific architecture decisions. This document captures
 **Decision:** Server-generated, single-use, time-limited nonce tied to action + parameters + caller.
 
 **Nonce properties:**
-- **Format:** UUID v4
-- **TTL:** Configurable per action category, default 5 minutes, hard maximum 30 minutes
+- **Format:** `wnc_` prefix + 32 hex characters (128 bits of entropy). The `wnc_` prefix stands for "wild nonce confirmation" and enables pattern matching in logs.
+- **TTL:** Configurable per action, default 30 seconds, hard ceiling 120 seconds, hard floor 10 seconds
 - **Storage:** In-memory hash with TTL-based expiry (no database dependency)
 - **Binding:** Nonce is bound to `(action_name, parameter_hash, caller_id)` — if any component changes between preview and execute, the nonce is invalid
 - **Single-use:** Consumed on first execute attempt, regardless of outcome
@@ -57,7 +57,7 @@ The safety model implies specific architecture decisions. This document captures
 
 **Rationale:** Nonces prevent replay attacks — a captured confirmation cannot be reused. Parameter binding prevents bait-and-switch — you cannot preview a safe action and then confirm a dangerous one. Caller binding prevents one operator from confirming another operator's preview. Time-limiting prevents stale confirmations from being used after the system state has changed.
 
-**Trade-off:** Requires server-side state for pending confirmations. The in-memory store means pending confirmations are lost on server restart, which is acceptable — an operator simply re-runs the dry-run. The TTL hard maximum of 30 minutes prevents indefinitely hanging confirmations.
+**Trade-off:** Requires server-side state for pending confirmations. The in-memory store means pending confirmations are lost on server restart, which is acceptable — an operator simply re-runs the dry-run. The TTL hard ceiling of 120 seconds prevents indefinitely hanging confirmations while keeping the default (30s) tight enough to minimize the replay window.
 
 ---
 
@@ -88,7 +88,7 @@ The safety model implies specific architecture decisions. This document captures
     "queue": "default",
     "max_count": 50
   },
-  "nonce": "uuid-v4-here",
+  "nonce": "wnc_a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4",
   "before_snapshot": {
     "resource_type": "background_jobs",
     "count": 47,
@@ -209,10 +209,11 @@ The safety model implies specific architecture decisions. This document captures
 - Client-side throttling — document recommended intervals, let clients enforce
 - Server-side per-caller rate limits — the server tracks invocation rates and rejects excess requests
 
-**Decision:** Server-side per-caller rate limits with a sliding window algorithm.
+**Decision:** Server-side per-caller rate limits with a sliding window algorithm, plus a global rate ceiling across all callers.
 
 **Rate limit properties:**
-- **Tracked per:** `(caller_id, action_category)` tuple
+- **Tracked per:** `(caller_id, action_category)` tuple for per-caller limits
+- **Global ceiling:** Separate global rate limits (`all_mutations: 120/minute`, `all_reads: 600/minute`) cap total throughput across all callers, defending against distributed attacks using multiple valid identities (see 005 Threat 9)
 - **Algorithm:** Sliding window counter
 - **Configurable per category** with hard ceiling maximums that cannot be exceeded by configuration
 
@@ -240,3 +241,39 @@ The safety model implies specific architecture decisions. This document captures
 **Rationale:** Client-side throttling is bypassable — whether intentionally or through buggy client code. Server-side enforcement is the only reliable approach. Per-caller tracking prevents one caller from consuming the rate budget of others. The sliding window algorithm provides smooth rate enforcement without the burst-at-boundary problem of fixed windows. Hard ceilings on rate configuration prevent an operator from setting limits so high that they are effectively meaningless.
 
 **Trade-off:** Requires server-side state for rate tracking (in-memory counters per caller per category). Adds slight latency for the rate check on every request. The state is small (a few integers per active caller per category) and ephemeral (lost on restart, which is acceptable — rate limits reset). The latency is negligible relative to the cost of the admin action itself.
+
+---
+
+## Decision 8: Nonce Error Response Design — Granular Internal, Generic External
+
+**Context:** When a confirmation nonce fails validation, the server knows the specific reason — not found, expired, already used, parameter mismatch, caller mismatch, action mismatch. The question is whether to expose this granularity to the client.
+
+**Options considered:**
+- Granular errors to client — return the specific failure reason (`nonce_expired`, `nonce_already_used`, etc.) so clients can present helpful error messages
+- Generic error to client — return a single `nonce_invalid` code regardless of the underlying reason
+- Split approach — granular in audit logs, generic in client responses
+
+**Decision:** Split approach. The client always receives `nonce_invalid`. The audit trail and server logs record the specific error code (`nonce_not_found`, `nonce_expired`, `nonce_already_used`, `nonce_parameter_mismatch`, `nonce_identity_mismatch`, `nonce_action_mismatch`).
+
+**Client response (always generic):**
+```json
+{
+  "status": "error",
+  "error_code": "nonce_invalid",
+  "message": "Confirmation nonce is invalid, expired, or already used. Request a new confirmation."
+}
+```
+
+**Audit record (specific):**
+```json
+{
+  "outcome": "nonce_rejected",
+  "denial_reason": "nonce_expired",
+  "nonce_id": "wnc_a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4",
+  "ttl_exceeded_by_seconds": 14
+}
+```
+
+**Rationale:** Distinguishing between "not found," "expired," and "already used" in client responses enables probing attacks. An attacker can determine whether a nonce existed (found vs. not found), whether it was recently valid (expired vs. not found), and whether it has been consumed (already used vs. expired). The generic response eliminates this information channel. Meanwhile, server operators need the granular detail for incident investigation and replay detection — so the audit trail retains it.
+
+**Trade-off:** Clients cannot provide specific guidance to users ("your nonce expired, please re-request" vs. "nonce was already used"). This is acceptable because the recovery path is identical in all cases: request a new confirmation. The slight UX cost is worth the security benefit.

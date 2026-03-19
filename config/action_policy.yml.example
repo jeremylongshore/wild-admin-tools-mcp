@@ -1,0 +1,395 @@
+# Action Policy for wild-admin-tools-mcp
+#
+# This file defines the complete action allowlist, rate limits, blast radius caps,
+# confirmation requirements, and parameter schemas for all administrative operations.
+#
+# USAGE:
+#   1. Copy this file to config/action_policy.yml
+#   2. Customize actions, rate limits, and caps for your environment
+#   3. Restart the server — the policy is loaded and validated at startup
+#
+# RULES:
+#   - The server will NOT start without a valid config/action_policy.yml
+#   - All values are validated against hard ceilings at startup
+#   - Per-action rate limits cannot exceed hard_ceilings.max_rate_limit
+#   - Per-action blast_radius_cap cannot exceed hard_ceilings.max_blast_radius
+#   - Per-action nonce_ttl_seconds must be between min and max nonce TTL ceilings
+#   - read operations must have requires_confirmation: false
+#   - mutate and mutate_destructive operations must have requires_confirmation: true
+#   - Action names must match ^[a-z][a-z0-9_]{0,63}$
+#   - No duplicate action names across categories
+#
+# REFERENCE: See 000-docs/004-TQ-STND-mutation-policy.md for the full specification.
+
+version: 1
+
+defaults:
+  rate_limit: 30/minute
+  blast_radius_cap: 1
+  requires_confirmation: true
+  nonce_ttl_seconds: 30
+
+hard_ceilings:
+  max_rate_limit: 60/minute
+  max_blast_radius: 1000
+  max_nonce_ttl_seconds: 120
+  min_nonce_ttl_seconds: 10
+
+global_rate_limits:
+  all_mutations: 120/minute
+  all_reads: 600/minute
+
+action_categories:
+  background_jobs:
+    description: "Background job management"
+    resource_scope: "Sidekiq API only"
+    actions:
+      - name: inspect_job
+        description: "Retrieve state of a single job"
+        operation: read
+        requires_confirmation: false
+        blast_radius_cap: 1
+        rate_limit: 60/minute
+        parameters:
+          required:
+            - name: job_id
+              type: string
+              validation:
+                format: "^[a-zA-Z0-9_-]{1,255}$"
+          optional:
+            - name: queue_name
+              type: string
+              validation:
+                format: "^[a-zA-Z0-9_-]{1,128}$"
+
+      - name: list_failed_jobs
+        description: "List jobs in failed state"
+        operation: read
+        requires_confirmation: false
+        blast_radius_cap: 1
+        rate_limit: 30/minute
+        parameters:
+          required: []
+          optional:
+            - name: queue_name
+              type: string
+              validation:
+                format: "^[a-zA-Z0-9_-]{1,128}$"
+            - name: error_class
+              type: string
+              validation:
+                format: "^[a-zA-Z0-9_:]{1,255}$"
+            - name: limit
+              type: integer
+              validation:
+                min: 1
+                max: 200
+              default: 50
+
+      - name: list_queues
+        description: "List all queues with depth"
+        operation: read
+        requires_confirmation: false
+        blast_radius_cap: 1
+        rate_limit: 30/minute
+        parameters:
+          required: []
+          optional: []
+
+      - name: retry_job
+        description: "Re-enqueue a single failed job"
+        operation: mutate
+        requires_confirmation: true
+        blast_radius_cap: 1
+        rate_limit: 10/minute
+        parameters:
+          required:
+            - name: job_id
+              type: string
+              validation:
+                format: "^[a-zA-Z0-9_-]{1,255}$"
+          optional: []
+
+      - name: retry_jobs_by_filter
+        description: "Re-enqueue failed jobs matching filter"
+        operation: mutate
+        requires_confirmation: true
+        blast_radius_cap: 100
+        rate_limit: 3/minute
+        parameters:
+          required:
+            - name: filter
+              type: object
+              properties:
+                queue_name:
+                  type: string
+                error_class:
+                  type: string
+                job_class:
+                  type: string
+              min_properties: 1
+          optional:
+            - name: max_count
+              type: integer
+              validation:
+                min: 1
+                max: 100
+              default: 10
+
+      - name: discard_job
+        description: "Permanently discard a single failed job"
+        operation: mutate_destructive
+        requires_confirmation: true
+        blast_radius_cap: 1
+        rate_limit: 10/minute
+        nonce_ttl_seconds: 15
+        parameters:
+          required:
+            - name: job_id
+              type: string
+              validation:
+                format: "^[a-zA-Z0-9_-]{1,255}$"
+          optional: []
+
+      - name: discard_jobs_by_filter
+        description: "Permanently discard failed jobs matching filter"
+        operation: mutate_destructive
+        requires_confirmation: true
+        blast_radius_cap: 100
+        rate_limit: 2/minute
+        nonce_ttl_seconds: 15
+        parameters:
+          required:
+            - name: filter
+              type: object
+              properties:
+                queue_name:
+                  type: string
+                error_class:
+                  type: string
+                job_class:
+                  type: string
+              min_properties: 1
+          optional:
+            - name: max_count
+              type: integer
+              validation:
+                min: 1
+                max: 100
+              default: 10
+
+  cache:
+    description: "Cache management"
+    resource_scope: "Rails.cache API only"
+    actions:
+      - name: inspect_cache_key
+        description: "Read value and metadata for a cache key"
+        operation: read
+        requires_confirmation: false
+        blast_radius_cap: 1
+        rate_limit: 60/minute
+        parameters:
+          required:
+            - name: cache_key
+              type: string
+              validation:
+                max_length: 512
+          optional: []
+
+      - name: inspect_cache_stats
+        description: "Retrieve aggregate cache statistics"
+        operation: read
+        requires_confirmation: false
+        blast_radius_cap: 1
+        rate_limit: 10/minute
+        parameters:
+          required: []
+          optional: []
+
+      - name: list_cache_keys
+        description: "List cache keys matching a prefix"
+        operation: read
+        requires_confirmation: false
+        blast_radius_cap: 1
+        rate_limit: 10/minute
+        parameters:
+          required:
+            - name: prefix
+              type: string
+              validation:
+                format: "^[a-zA-Z0-9_:/-]{1,256}$"
+          optional:
+            - name: limit
+              type: integer
+              validation:
+                min: 1
+                max: 200
+              default: 50
+
+      - name: invalidate_cache_key
+        description: "Delete a single cache key"
+        operation: mutate
+        requires_confirmation: true
+        blast_radius_cap: 1
+        rate_limit: 30/minute
+        parameters:
+          required:
+            - name: cache_key
+              type: string
+              validation:
+                max_length: 512
+          optional: []
+
+      - name: invalidate_cache_pattern
+        description: "Delete all cache keys matching a prefix"
+        operation: mutate_destructive
+        requires_confirmation: true
+        blast_radius_cap: 500
+        rate_limit: 2/minute
+        nonce_ttl_seconds: 15
+        parameters:
+          required:
+            - name: pattern
+              type: string
+              validation:
+                format: "^[a-zA-Z0-9_:/-]{1,256}$"
+                min_length: 3
+          optional:
+            - name: dry_run
+              type: boolean
+              default: false
+
+  feature_flags:
+    description: "Feature flag management"
+    resource_scope: "Flipper API only"
+    actions:
+      - name: read_flag
+        description: "Read state of a feature flag"
+        operation: read
+        requires_confirmation: false
+        blast_radius_cap: 1
+        rate_limit: 60/minute
+        parameters:
+          required:
+            - name: flag_name
+              type: string
+              validation:
+                format: "^[a-zA-Z0-9_.-]{1,128}$"
+          optional: []
+
+      - name: list_flags
+        description: "List all feature flags"
+        operation: read
+        requires_confirmation: false
+        blast_radius_cap: 1
+        rate_limit: 10/minute
+        parameters:
+          required: []
+          optional:
+            - name: filter
+              type: string
+              validation:
+                format: "^[a-zA-Z0-9_.-]{1,128}$"
+            - name: enabled_only
+              type: boolean
+              default: false
+            - name: limit
+              type: integer
+              validation:
+                min: 1
+                max: 500
+              default: 100
+
+      - name: toggle_flag
+        description: "Enable or disable a feature flag"
+        operation: mutate
+        requires_confirmation: true
+        blast_radius_cap: 1
+        rate_limit: 10/minute
+        parameters:
+          required:
+            - name: flag_name
+              type: string
+              validation:
+                format: "^[a-zA-Z0-9_.-]{1,128}$"
+            - name: enabled
+              type: boolean
+          optional: []
+
+      - name: enable_flag_for_actor
+        description: "Enable flag for a specific actor"
+        operation: mutate
+        requires_confirmation: true
+        blast_radius_cap: 1
+        rate_limit: 10/minute
+        parameters:
+          required:
+            - name: flag_name
+              type: string
+              validation:
+                format: "^[a-zA-Z0-9_.-]{1,128}$"
+            - name: actor_type
+              type: string
+              validation:
+                format: "^[a-zA-Z0-9_]{1,64}$"
+            - name: actor_id
+              type: string
+              validation:
+                format: "^[a-zA-Z0-9_-]{1,255}$"
+          optional: []
+
+      - name: disable_flag_for_actor
+        description: "Disable flag for a specific actor"
+        operation: mutate
+        requires_confirmation: true
+        blast_radius_cap: 1
+        rate_limit: 10/minute
+        parameters:
+          required:
+            - name: flag_name
+              type: string
+              validation:
+                format: "^[a-zA-Z0-9_.-]{1,128}$"
+            - name: actor_type
+              type: string
+              validation:
+                format: "^[a-zA-Z0-9_]{1,64}$"
+            - name: actor_id
+              type: string
+              validation:
+                format: "^[a-zA-Z0-9_-]{1,255}$"
+          optional: []
+
+      - name: enable_flag_percentage
+        description: "Enable flag for a percentage of actors"
+        operation: mutate
+        requires_confirmation: true
+        blast_radius_cap: 1
+        rate_limit: 5/minute
+        parameters:
+          required:
+            - name: flag_name
+              type: string
+              validation:
+                format: "^[a-zA-Z0-9_.-]{1,128}$"
+            - name: percentage
+              type: integer
+              validation:
+                min: 0
+                max: 100
+          optional: []
+
+      - name: delete_flag
+        description: "Permanently delete a feature flag"
+        operation: mutate_destructive
+        requires_confirmation: true
+        blast_radius_cap: 1
+        rate_limit: 3/minute
+        nonce_ttl_seconds: 15
+        parameters:
+          required:
+            - name: flag_name
+              type: string
+              validation:
+                format: "^[a-zA-Z0-9_.-]{1,128}$"
+          optional: []

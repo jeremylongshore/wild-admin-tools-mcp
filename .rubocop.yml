@@ -33,7 +33,37 @@ RSpec/ContextWording:
 RSpec/DescribeClass:
   Exclude:
     - "spec/safety/**/*"
+    - "spec/wild_admin_tools_mcp/guard/integration_spec.rb"
+
+RSpec/MultipleMemoizedHelpers:
+  Max: 10
 
 Style/OneClassPerFile:
   Exclude:
     - "spec/support/**/*"
+
+Metrics/MethodLength:
+  Max: 15
+  Exclude:
+    - "spec/support/**/*"
+
+Metrics/AbcSize:
+  Max: 20
+  Exclude:
+    - "spec/support/**/*"
+
+Metrics/ParameterLists:
+  MaxOptionalParameters: 7
+  Exclude:
+    - "lib/wild_admin_tools_mcp/result.rb"
+    - "lib/wild_admin_tools_mcp/guard/pipeline.rb"
+
+Metrics/ModuleLength:
+  Exclude:
+    - "spec/support/**/*"
+
+Metrics/CyclomaticComplexity:
+  Max: 8
+
+Metrics/PerceivedComplexity:
+  Max: 9
