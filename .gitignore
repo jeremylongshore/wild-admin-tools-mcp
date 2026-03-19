@@ -15,6 +15,9 @@ pkg/
 # RSpec
 .rspec_status
 
+# Operator config (the .example is tracked; the actual policy is not)
+config/action_policy.yml
+
 # IDE
 .idea/
 .vscode/

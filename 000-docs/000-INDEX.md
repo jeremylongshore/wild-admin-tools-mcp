@@ -7,7 +7,8 @@
 | 003 | 003-TQ-STND-safety-model.md | TQ — Testing & Quality | STND | Safety model spec — mutation-bounded ops, dry-run enforcement, confirmation protocol, blast radius caps, rate limits, audit, defect definition |
 | 004 | 004-TQ-STND-mutation-policy.md | TQ — Testing & Quality | STND | Mutation policy spec — action allowlist YAML format, blast radius caps, rate limits, confirmation requirements, nonce protocol |
 | 005 | 005-AT-ADEC-threat-model.md | AT — Architecture & Technical | ADEC | Threat model — 10 mutation-specific threats with mitigations and verification requirements |
-| 006 | 006-AT-ADEC-safety-architecture-decisions.md | AT — Architecture & Technical | ADEC | 7 safety-driven architecture decisions with context, rationale, and trade-off analysis |
+| 006 | 006-AT-ADEC-safety-architecture-decisions.md | AT — Architecture & Technical | ADEC | 8 safety-driven architecture decisions with context, rationale, and trade-off analysis |
+| 007 | 007-TQ-STND-safety-cross-reference-matrix.md | TQ — Testing & Quality | STND | Safety cross-reference matrix — rule-threat-decision mapping, 19-action cross-reference, resolved inconsistencies log, gap analysis |
 
 ## Category Reference
 
