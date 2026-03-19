@@ -12,7 +12,8 @@
 | 008 | 008-AT-ADEC-audit-trail-storage-decision.md | AT — Architecture & Technical | ADEC | Audit trail storage decision — JSON Lines for production, MemoryStore for tests, shared Store interface |
 | 009 | 009-AT-ADEC-identity-and-auth-model.md | AT — Architecture & Technical | ADEC | Identity and auth model — SessionContext value object, IdentityExtractor, anonymous rejection |
 | 010 | 010-AT-ADEC-capability-gate-integration.md | AT — Architecture & Technical | ADEC | Capability gate integration — in-process library, fail-closed, GateClient wrapper, AuthenticatedPipeline |
-| 012 | 012-TQ-SECU-evaluation-strategy.md | TQ — Testing & Quality | SECU | Security evaluation strategy |
+| 011 | 011-TQ-STND-end-to-end-validation.md | TQ — Testing & Quality | STND | End-to-end validation — confirmation flow demo script, acceptance criteria, failure indicators |
+| 012 | 012-TQ-SECU-evaluation-strategy.md | TQ — Testing & Quality | SECU | Security evaluation strategy — safety rule coverage map, threat coverage, regression protocol |
 | 013 | 013-OD-OPNS-operator-deployment-guide.md | OD — Operations & Deployment | OPNS | Operator deployment guide — prerequisites, installation, adapter config, server setup, production checklist |
 | 014 | 014-DR-REFF-configuration-reference.md | DR — Documentation & Reference | REFF | Configuration reference — full policy YAML schema, all 19 action parameter specs, operation types, nonce protocol |
 | 015 | 015-OD-GUID-operator-workflow-guide.md | OD — Operations & Deployment | GUID | Operator workflow guide — adding actions, blast radius, rate limits, audit log inspection, access revocation, troubleshooting |

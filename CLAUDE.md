@@ -9,7 +9,7 @@ This file provides guidance to Claude Code when working in this repository.
 - **Archetype:** A — Product-Facing Operational
 - **Mission:** Governed administrative operations (jobs, cache, flags) for Rails applications via MCP
 - **Language:** Ruby
-- **Status:** Phase 0 — planning and scaffolding complete, no application code yet
+- **Status:** v1 complete — 439 tests, 0 failures, all 10 epics closed
 
 ## What This Repo Does
 
@@ -88,6 +88,10 @@ These are non-negotiable when working in this repo:
 | `000-docs/004-TQ-STND-mutation-policy.md` | Action allowlist format, blast radius caps, rate limits, confirmation protocol |
 | `000-docs/005-AT-ADEC-threat-model.md` | 10 mutation-specific threats with mitigations |
 | `000-docs/006-AT-ADEC-safety-architecture-decisions.md` | 7 safety-driven architecture decisions with rationale |
+| `000-docs/012-TQ-SECU-evaluation-strategy.md` | Adversarial test coverage map and regression protocol |
+| `000-docs/013-OD-OPNS-operator-deployment-guide.md` | Setup, configuration, and deployment |
+| `000-docs/014-DR-REFF-configuration-reference.md` | Every parameter, type, default, and hard ceiling |
+| `000-docs/015-OD-GUID-operator-workflow-guide.md` | Day-to-day operations and troubleshooting |
 
 ## Task Tracking
 

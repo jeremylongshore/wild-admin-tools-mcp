@@ -12,36 +12,70 @@ This repo is the **write/admin complement** to [`wild-rails-safe-introspection-m
 
 ## Status
 
-**Phase 0 — Planning and scaffolding.** No application code exists yet.
+**v1 complete — shippable.** All 10 epics closed. 439 tests, 0 failures, 0 lint offenses.
 
-- Repo blueprint: complete
-- Safety model: complete
-- Threat model: complete
-- 10-epic build plan: complete
-- Beads initialized: complete
-- Implementation: not started
+## Quick Start
 
-## Planned v1 Tools
+```bash
+# Install
+gem 'wild-admin-tools-mcp', git: 'https://github.com/jeremylongshore/wild-admin-tools-mcp'
+bundle install
 
-| Tool | Category | Description |
-|------|----------|-------------|
-| `manage_background_jobs` | Jobs | Inspect, retry, discard background jobs (Sidekiq/GoodJob) |
-| `manage_cache` | Cache | Inspect cache keys/stats, invalidate specific keys or patterns |
-| `manage_feature_flags` | Flags | Read flag state, toggle flags with confirmation |
+# Configure
+cp config/action_policy.yml.example config/action_policy.yml
+# Edit config/action_policy.yml for your environment
+
+# Verify
+bundle exec rspec
+bundle exec rubocop
+```
+
+See `000-docs/013-OD-OPNS-operator-deployment-guide.md` for full setup instructions.
+
+## v1 Tools
+
+| Tool | Actions | Description |
+|------|---------|-------------|
+| `manage_background_jobs` | 7 | Inspect, retry, discard jobs — single or batch with blast radius caps |
+| `manage_cache` | 5 | Inspect keys/stats, invalidate single keys or patterns |
+| `manage_feature_flags` | 7 | Read/list flags, toggle, enable/disable per actor, set percentage, delete |
+
+**19 total actions** across 3 categories. All mutations require two-phase nonce confirmation.
 
 ## Safety Model
 
-Every operation in this repo is governed by a mutation-aware safety model:
+Every operation is governed by 10 enforceable safety rules:
 
 1. **Mutation-bounded** — Only allowlisted actions can execute
-2. **Dry-run first** — Every action supports preview mode
-3. **Two-phase confirmation** — Destructive actions require explicit nonce-based confirmation
-4. **Before/after audit** — State snapshots recorded for every mutation
-5. **Gate-required** — Mandatory capability gate integration (not stubbed)
-6. **Blast radius caps** — Per-action limits on affected resources
-7. **Rate limited** — Per-caller, per-category mutation throttling
+2. **Dry-run first** — Every action supports preview mode with zero side effects
+3. **Two-phase confirmation** — Mutations require explicit nonce-based confirmation
+4. **Parameter validation** — Strict schema enforcement, no eval/constantize/send
+5. **Action allowlist** — Configuration-driven, validated at startup
+6. **Blast radius caps** — Per-action limits with hard ceilings
+7. **Rate limited** — Per-caller and global rate limits
+8. **Before/after snapshots** — State captured for every executed mutation
+9. **Gate required** — Mandatory capability gate, fail-closed on error
+10. **Audit everything** — Every invocation produces a structured audit record
 
-See `000-docs/003-TQ-STND-safety-model.md` for the full governing specification.
+Proven by 42 adversarial tests that actively try to break each safety claim. See `000-docs/012-TQ-SECU-evaluation-strategy.md`.
+
+## Architecture
+
+```
+MCP Client → MCP Server
+               ↓
+           ToolHandler
+               ↓
+     AuthenticatedPipeline  (identity extraction, gate check)
+               ↓
+       AuditedPipeline      (audit record wrapping)
+               ↓
+        Guard::Pipeline     (allowlist, params, rate limit, blast radius, nonce)
+               ↓
+          Executors          (JobExecutor, CacheExecutor, FlagExecutor)
+               ↓
+           Adapters          (abstract interface → concrete Rails backend)
+```
 
 ## Non-Goals
 
@@ -49,19 +83,24 @@ See `000-docs/003-TQ-STND-safety-model.md` for the full governing specification.
 - Arbitrary Ruby/Rails console execution
 - Database migrations or schema changes
 - Analytics queries or reporting
-- Rails console proxying (deferred to v2)
+- Rails console proxying (deferred to v2 — see `000-docs/016-PP-PLAN-v2-expansion-roadmap.md`)
 - User management operations (deferred to v2)
 
 ## Canonical Docs
 
 | Doc | Description |
 |-----|-------------|
-| `000-docs/001-PP-PLAN-repo-blueprint.md` | Mission, vision, architecture, safety model overview |
-| `000-docs/002-PP-PLAN-epic-build-plan.md` | 10-epic build plan with sequencing and dependencies |
-| `000-docs/003-TQ-STND-safety-model.md` | Governing safety specification — 10 enforceable rules |
-| `000-docs/004-TQ-STND-mutation-policy.md` | Action allowlist format, blast radius, rate limits |
-| `000-docs/005-AT-ADEC-threat-model.md` | 10 mutation-specific threats with mitigations |
-| `000-docs/006-AT-ADEC-safety-architecture-decisions.md` | 7 architecture decisions with rationale |
+| `001` | Repo blueprint — mission, vision, safety model |
+| `002` | 10-epic build plan |
+| `003` | Safety model — 10 enforceable rules |
+| `004` | Mutation policy — action allowlist format |
+| `005` | Threat model — 10 threats with mitigations |
+| `012` | Evaluation strategy — adversarial test coverage map |
+| `013` | Operator deployment guide |
+| `014` | Configuration reference |
+| `015` | Operator workflow guide |
+
+Full index: `000-docs/000-INDEX.md`
 
 ## Ecosystem
 
@@ -70,15 +109,20 @@ See `000-docs/003-TQ-STND-safety-model.md` for the full governing specification.
 | `wild-rails-safe-introspection-mcp` | Read-only companion — shares MCP patterns, not code |
 | `wild-capability-gate` | Mandatory runtime dependency — gates all operations |
 
-## Local Development with wild-capability-gate
+## Development
 
-By default, `wild-capability-gate` is fetched from GitHub (git-based dependency). For local development with a sibling checkout:
+```bash
+bundle install                    # Install dependencies
+bundle exec rspec                 # Run tests (439 examples)
+bundle exec rspec spec/safety/    # Run adversarial safety suite (42 examples)
+bundle exec rubocop               # Lint (91 files)
+```
+
+For local development with a sibling `wild-capability-gate` checkout:
 
 ```bash
 USE_LOCAL_CAPABILITY_GATE=true bundle install
 ```
-
-This resolves the gem from `../wild-capability-gate` instead. CI always uses the git-based dependency.
 
 ## License
 
