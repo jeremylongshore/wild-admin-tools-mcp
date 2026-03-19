@@ -12,6 +12,14 @@
 | 008 | 008-AT-ADEC-audit-trail-storage-decision.md | AT — Architecture & Technical | ADEC | Audit trail storage decision — JSON Lines for production, MemoryStore for tests, shared Store interface |
 | 009 | 009-AT-ADEC-identity-and-auth-model.md | AT — Architecture & Technical | ADEC | Identity and auth model — SessionContext value object, IdentityExtractor, anonymous rejection |
 | 010 | 010-AT-ADEC-capability-gate-integration.md | AT — Architecture & Technical | ADEC | Capability gate integration — in-process library, fail-closed, GateClient wrapper, AuthenticatedPipeline |
+| 012 | 012-TQ-SECU-evaluation-strategy.md | TQ — Testing & Quality | SECU | Security evaluation strategy |
+| 013 | 013-OD-OPNS-operator-deployment-guide.md | OD — Operations & Deployment | OPNS | Operator deployment guide — prerequisites, installation, adapter config, server setup, production checklist |
+| 014 | 014-DR-REFF-configuration-reference.md | DR — Documentation & Reference | REFF | Configuration reference — full policy YAML schema, all 19 action parameter specs, operation types, nonce protocol |
+| 015 | 015-OD-GUID-operator-workflow-guide.md | OD — Operations & Deployment | GUID | Operator workflow guide — adding actions, blast radius, rate limits, audit log inspection, access revocation, troubleshooting |
+| 016 | 016-PP-PLAN-v2-expansion-roadmap.md | PP — Product & Planning | PLAN | v2 expansion roadmap — console proxying safety requirements, tool candidates with safety review, cross-repo dependency updates |
+| 017 | 017-AT-ADEC-architecture-extension-points.md | AT — Architecture & Technical | ADEC | Architecture extension points — adding tools, action categories, adapter backends, identity providers, audit stores, extension safety rules |
+| 018 | 018-AT-ADEC-telemetry-emission-hook-interface.md | AT — Architecture & Technical | ADEC | Telemetry emission hook interface — event schema, hook points, privacy constraints, integration pattern with wild-session-telemetry |
+| 019 | 019-PP-PLAN-confirmed-out-of-scope.md | PP — Product & Planning | PLAN | Confirmed out-of-scope — permanently excluded features, v2 deferrals with re-evaluation conditions, ecosystem repo boundaries |
 
 ## Category Reference
 
