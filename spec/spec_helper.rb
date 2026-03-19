@@ -5,6 +5,7 @@ require_relative 'support/test_adapters'
 require_relative 'support/shared_examples/executor_shared_examples'
 require_relative 'support/policy_fixtures'
 require_relative 'support/test_gate'
+require_relative 'support/safety_helpers'
 
 RSpec.configure do |config|
   config.expect_with :rspec do |expectations|
@@ -23,6 +24,7 @@ RSpec.configure do |config|
   Kernel.srand config.seed
 
   config.include WildAdminToolsMcp::TestSupport::PolicyFixtures
+  config.include WildAdminToolsMcp::TestSupport::SafetyHelpers
 
   config.before do
     WildAdminToolsMcp.reset_configuration!
