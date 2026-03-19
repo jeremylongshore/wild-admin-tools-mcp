@@ -22,6 +22,11 @@ require_relative 'wild_admin_tools_mcp/guard/nonce_store'
 require_relative 'wild_admin_tools_mcp/guard/nonce_manager'
 require_relative 'wild_admin_tools_mcp/guard/two_phase_flow'
 require_relative 'wild_admin_tools_mcp/guard/pipeline'
+require_relative 'wild_admin_tools_mcp/audit/record'
+require_relative 'wild_admin_tools_mcp/audit/parameter_sanitizer'
+require_relative 'wild_admin_tools_mcp/audit/store'
+require_relative 'wild_admin_tools_mcp/audit/recorder'
+require_relative 'wild_admin_tools_mcp/audit/audited_pipeline'
 
 module WildAdminToolsMcp
   class << self

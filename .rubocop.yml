@@ -57,6 +57,11 @@ Metrics/ParameterLists:
   Exclude:
     - "lib/wild_admin_tools_mcp/result.rb"
     - "lib/wild_admin_tools_mcp/guard/pipeline.rb"
+    - "lib/wild_admin_tools_mcp/audit/record.rb"
+
+RSpec/MultipleDescribes:
+  Exclude:
+    - "spec/wild_admin_tools_mcp/audit/store_spec.rb"
 
 Metrics/ModuleLength:
   Exclude:
