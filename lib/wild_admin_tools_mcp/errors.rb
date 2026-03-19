@@ -31,4 +31,15 @@ module WildAdminToolsMcp
   end
 
   class ConfigurationError < Error; end
+
+  class AuthenticationError < Error; end
+
+  class GateError < Error
+    attr_reader :original_error
+
+    def initialize(message, original_error: nil)
+      @original_error = original_error
+      super(message)
+    end
+  end
 end

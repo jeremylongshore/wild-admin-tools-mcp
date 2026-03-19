@@ -3,7 +3,7 @@
 module WildAdminToolsMcp
   class Configuration
     attr_accessor :job_adapter, :cache_adapter, :flag_adapter, :policy_path,
-                  :audit_store, :audit_log_path
+                  :audit_store, :audit_log_path, :gate
 
     def initialize
       @job_adapter = nil
@@ -12,6 +12,7 @@ module WildAdminToolsMcp
       @policy_path = nil
       @audit_store = nil
       @audit_log_path = nil
+      @gate = nil
     end
 
     def validate!

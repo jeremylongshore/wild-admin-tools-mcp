@@ -4,6 +4,8 @@ source 'https://rubygems.org'
 
 gemspec
 
+gem 'wild-capability-gate', path: '../wild-capability-gate'
+
 group :development, :test do
   gem 'rspec', '~> 3.13'
   gem 'rubocop', '~> 1.68', require: false

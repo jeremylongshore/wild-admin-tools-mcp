@@ -4,6 +4,7 @@ require 'wild_admin_tools_mcp'
 require_relative 'support/test_adapters'
 require_relative 'support/shared_examples/executor_shared_examples'
 require_relative 'support/policy_fixtures'
+require_relative 'support/test_gate'
 
 RSpec.configure do |config|
   config.expect_with :rspec do |expectations|
