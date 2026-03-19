@@ -258,7 +258,7 @@ An attacker can execute mutations at an unlimited rate, potentially exhausting s
 
 - **Server-side rate enforcement** — rate limits are enforced by the server, never by the client. Client-side rate limiting is not relied upon for safety
 - **Per-caller tracking** — rate limits are tracked per authenticated caller identity. Each caller has an independent budget
-- **Global rate limit** — in addition to per-caller limits, a global rate limit caps the total mutation throughput across all callers. This protects against distributed attacks using multiple valid identities
+- **Global rate limit** — in addition to per-caller limits, a global rate limit caps the total mutation throughput across all callers (configured via `global_rate_limits` in `config/action_policy.yml`; see 004). This protects against distributed attacks using multiple valid identities
 - **All paths rate-limited** — rate limiting applies to all tool invocations, including previews, confirmations, and error paths. There is no unmetered endpoint
 - **No client-side rate limiting** — the server does not expose rate limit configuration to clients. The server enforces its own limits regardless of what the client claims or requests
 

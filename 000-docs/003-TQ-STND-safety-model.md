@@ -104,7 +104,7 @@ Every action MUST support a dry-run mode that shows exactly what would change wi
     "action_description": "Retry 3 failed jobs in queue 'mailers' that failed since 2026-03-18T00:00:00Z"
   },
   "confirmation": {
-    "nonce": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "nonce": "wnc_a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4",
     "expires_at": "2026-03-18T14:35:00Z",
     "action_hash": "sha256:abc123..."
   },
@@ -124,11 +124,11 @@ Every action MUST support a dry-run mode that shows exactly what would change wi
 
 ### Rule
 
-Destructive actions require two-phase confirmation: first a dry-run/preview, then an explicit confirmation with the nonce from the preview. The nonce is single-use, time-limited (configurable, default 5 minutes), and tied to the specific action+parameters.
+Destructive actions require two-phase confirmation: first a dry-run/preview, then an explicit confirmation with the nonce from the preview. The nonce is single-use, time-limited (configurable, default 30 seconds), and tied to the specific action+parameters.
 
 ### What this means in practice
 
-- Destructive actions are marked in the allowlist with `confirmation_required: true`
+- Destructive actions are marked in the allowlist with `requires_confirmation: true`
 - When a destructive action is invoked without a confirmation nonce, the system automatically runs a dry-run preview and returns the preview response with a nonce
 - The caller must then re-invoke the action with the nonce to execute it
 - The nonce is validated against: expiration time, action name, parameter hash, and single-use status
@@ -149,10 +149,11 @@ Destructive actions require two-phase confirmation: first a dry-run/preview, the
 
 | Property | Requirement |
 |----------|------------|
-| Format | UUID v4 |
-| TTL | Configurable, default 300 seconds (5 minutes) |
-| Hard ceiling TTL | 600 seconds (10 minutes) — not configurable beyond this |
-| Scope | Tied to action name + SHA-256 hash of sorted parameters |
+| Format | `wnc_` prefix + 32 hex characters (128 bits of entropy). Example: `wnc_a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4` |
+| TTL | Configurable, default 30 seconds |
+| Hard ceiling TTL | 120 seconds — not configurable beyond this |
+| Hard floor TTL | 10 seconds — not configurable below this |
+| Scope | Tied to action name + SHA-256 hash of sorted parameters + caller identity |
 | Single-use | Consumed on successful execution; cannot be reused |
 | Storage | Server-side (in-memory or configured store); never trusted from client alone |
 
@@ -169,12 +170,24 @@ Destructive actions require two-phase confirmation: first a dry-run/preview, the
 
 The error message does not distinguish between expired, used, or mismatched nonces — this prevents probing.
 
+### Operation types
+
+The mutation policy (004) classifies every action into one of three operation types:
+
+| Type | Confirmation | Description |
+|------|-------------|-------------|
+| `read` | Not required | Read-only actions (e.g., `inspect_job`, `read_flag`) |
+| `mutate` | Required | State-changing actions with recoverable effects (e.g., `retry_job`, `toggle_flag`) |
+| `mutate_destructive` | Required | State-changing actions with irreversible effects (e.g., `discard_job`, `delete_flag`) |
+
+`mutate_destructive` actions may also use shorter nonce TTLs and additional confirmation warnings. See 004 for the complete action catalog with operation type assignments.
+
 ### Enforcement mechanism
 
-1. **Allowlist annotation** — each action in the allowlist declares whether confirmation is required
+1. **Allowlist annotation** — each action in the allowlist declares whether confirmation is required via `requires_confirmation`
 2. **Dispatch guard** — the dispatcher checks confirmation requirements before calling the handler
 3. **Nonce store** — a server-side nonce store tracks issued, consumed, and expired nonces
-4. **Code review rule** — any PR that removes `confirmation_required` from a destructive action, or bypasses nonce validation, is a safety defect
+4. **Code review rule** — any PR that removes `requires_confirmation` from a destructive action, or bypasses nonce validation, is a safety defect
 
 ---
 
@@ -251,13 +264,13 @@ Each action category (jobs, cache, flags) has an explicit allowlist of permitted
 ### Allowlist format
 
 ```yaml
-# config/action_allowlist.yml
+# config/action_policy.yml (illustrative subset — see 004-TQ-STND-mutation-policy.md for the canonical action catalog)
 
 action_allowlist:
   jobs:
     retry_single:
       description: "Retry a single identified failed job"
-      confirmation_required: false
+      requires_confirmation: false
       blast_radius_cap: 1
       parameters:
         required:
@@ -269,7 +282,7 @@ action_allowlist:
 
     retry_failed_jobs:
       description: "Retry failed jobs in a queue matching criteria"
-      confirmation_required: true
+      requires_confirmation: true
       blast_radius_cap: 100
       parameters:
         required:
@@ -288,7 +301,7 @@ action_allowlist:
 
     discard:
       description: "Permanently discard a failed job"
-      confirmation_required: true
+      requires_confirmation: true
       blast_radius_cap: 1
       parameters:
         required:
@@ -300,7 +313,7 @@ action_allowlist:
 
     job_inspect:
       description: "Read job details (no mutation)"
-      confirmation_required: false
+      requires_confirmation: false
       blast_radius_cap: 0
       parameters:
         required:
@@ -313,7 +326,7 @@ action_allowlist:
   cache:
     cache_read:
       description: "Read a cache key value"
-      confirmation_required: false
+      requires_confirmation: false
       blast_radius_cap: 0
       parameters:
         required:
@@ -325,7 +338,7 @@ action_allowlist:
 
     cache_invalidate_key:
       description: "Invalidate a single cache key"
-      confirmation_required: false
+      requires_confirmation: false
       blast_radius_cap: 1
       parameters:
         required:
@@ -337,7 +350,7 @@ action_allowlist:
 
     cache_invalidate_pattern:
       description: "Invalidate cache keys matching a pattern"
-      confirmation_required: true
+      requires_confirmation: true
       blast_radius_cap: 500
       parameters:
         required:
@@ -355,7 +368,7 @@ action_allowlist:
   flags:
     flag_read:
       description: "Read current state of a feature flag"
-      confirmation_required: false
+      requires_confirmation: false
       blast_radius_cap: 0
       parameters:
         required:
@@ -368,7 +381,7 @@ action_allowlist:
 
     flag_enable:
       description: "Enable a feature flag"
-      confirmation_required: true
+      requires_confirmation: true
       blast_radius_cap: 1
       parameters:
         required:
@@ -384,7 +397,7 @@ action_allowlist:
 
     flag_disable:
       description: "Disable a feature flag"
-      confirmation_required: true
+      requires_confirmation: true
       blast_radius_cap: 1
       parameters:
         required:
@@ -412,7 +425,7 @@ action_allowlist:
 
 At startup, the server:
 1. Parses the allowlist YAML
-2. Validates every entry has required fields (description, confirmation_required, blast_radius_cap, parameters)
+2. Validates every entry has required fields (description, requires_confirmation, blast_radius_cap, parameters)
 3. Validates parameter schemas are well-formed
 4. Validates cross-references (allowed_queues, allowed_flags lists exist if referenced)
 5. Refuses to start if any validation fails
@@ -446,27 +459,28 @@ Every action has a configurable maximum blast radius: max jobs affected per retr
 
 ### What this means in practice
 
-- If a `retry_failed_jobs` query matches 500 jobs but the blast radius cap is 100, only the first 100 are retried
-- The response includes `capped: true` and `total_matching` so the caller knows more exist
-- The blast radius cap is checked during the dry-run preview — the preview shows the capped count, not the uncapped count
+- If a `retry_failed_jobs` query matches 500 jobs but the blast radius cap is 100, **the request is rejected before any mutation occurs** — no partial execution, no silent truncation
+- The rejection response includes the estimated count and the cap, so the caller knows why it failed and can narrow their scope
+- The blast radius cap is checked during the dry-run preview — the preview estimates the affected count and rejects if it exceeds the cap
+- At execution time, the count is rechecked — if the count has grown beyond the cap since the preview, execution is aborted
 - Hard ceilings are coded into the application and cannot be raised by configuration; they exist to prevent misconfiguration from causing unbounded mutations
 - A configuration value that exceeds the hard ceiling is rejected at startup
 
-### Capped response indicator
+### Blast radius exceeded response
 
 ```json
 {
-  "status": "success",
+  "status": "error",
+  "error_code": "blast_radius_exceeded",
   "action": "retry_failed_jobs",
-  "result": {
-    "retried_count": 100,
-    "total_matching": 347,
-    "capped": true,
-    "cap_applied": 100
-  },
+  "blast_radius_cap": 100,
+  "estimated_affected": 347,
+  "suggestion": "Add more specific filter criteria to reduce the affected count, or invoke multiple times with smaller batches.",
   "timestamp": "2026-03-18T14:30:00Z"
 }
 ```
+
+Silent truncation (processing only the first N matches) is a safety defect — it masks the true scope of the request and creates unpredictable behavior. Rejection forces the caller to make an explicit decision about how to proceed.
 
 ### Enforcement mechanism
 
@@ -516,27 +530,14 @@ Per-action rate limits prevent rapid-fire mutations. Configurable per action cat
 
 ### Configuration
 
-```yaml
-# config/rate_limits.yml
+Rate limits are declared **inline per-action** in `config/action_policy.yml`, not in a separate file. Each action specifies its `rate_limit` field in the format `<count>/minute`. A global default in the `defaults` section applies to any action that omits its own rate limit. See 004-TQ-STND-mutation-policy.md for the complete policy format and all 19 actions with their rate limits.
 
-rate_limits:
-  jobs:
-    retry_single:
-      max_per_minute: 10
-    retry_failed_jobs:
-      max_per_minute: 5
-    discard:
-      max_per_minute: 10
-  cache:
-    cache_invalidate_key:
-      max_per_minute: 10
-    cache_invalidate_pattern:
-      max_per_minute: 5
-  flags:
-    flag_enable:
-      max_per_minute: 3
-    flag_disable:
-      max_per_minute: 3
+In addition to per-action limits, `global_rate_limits` in the policy file cap total throughput across all callers:
+
+```yaml
+global_rate_limits:
+  all_mutations: 120/minute
+  all_reads: 600/minute
 ```
 
 ### Enforcement mechanism
@@ -590,7 +591,7 @@ Every mutation records the state before and after the action in the audit trail.
     "limit": 50
   },
   "outcome": "success",
-  "confirmation_nonce": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "confirmation_nonce": "wnc_a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4",
   "blast_radius": {
     "affected_count": 3,
     "cap_applied": 100,
@@ -722,7 +723,7 @@ A safety defect is any code that:
 
 1. **Executes an action not on the allowlist** — any code path that dispatches to an action handler without checking the action allowlist
 2. **Allows dry-run to trigger side effects** — any dry-run code path that calls mutation methods, enqueues work, writes to a database, or modifies external state
-3. **Allows confirmation bypass for destructive actions** — any code path that executes a destructive action (one marked `confirmation_required: true`) without validating a confirmation nonce
+3. **Allows confirmation bypass for destructive actions** — any code path that executes a destructive action (one marked `requires_confirmation: true`) without validating a confirmation nonce
 4. **Omits before/after snapshots** — any mutating action handler that executes without recording before and after state snapshots in the audit trail
 5. **Bypasses the capability gate** — any code path that executes an action without consulting the capability gate, or any configuration option that stubs/disables the gate
 6. **Exceeds blast radius caps** — any handler that processes more resources than its declared blast radius cap, or any configuration that exceeds the hard ceiling
@@ -811,7 +812,7 @@ When a design decision involves choosing between more permissive and more restri
 | Blast radius caps | Low defaults (see Rule 6) | Limits damage from misconfigured calls |
 | Rate limits | Conservative (see Rule 7) | Prevents rapid-fire mutation storms |
 | Capability gate | Mandatory, fail-closed | No mutations without authorization |
-| Nonce TTL | 5 minutes | Short enough to prevent stale confirmations |
+| Nonce TTL | 30 seconds (ceiling 120s, floor 10s) | Short enough to prevent stale confirmations |
 | Unknown action | Denied | Not "try to find a handler anyway" |
 | Missing identity | Denied | Not "allow with reduced privileges" |
 | Gate unavailable | Denied | Not "allow and check later" |

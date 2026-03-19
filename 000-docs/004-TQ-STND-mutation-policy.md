@@ -653,6 +653,32 @@ Nonces are stored in-memory with a background sweep that removes expired nonces.
 | Caller identity mismatch | `nonce_identity_mismatch` | Reject. Logged as a potential impersonation attempt. |
 | Action name mismatch | `nonce_action_mismatch` | Reject. Logged as a potential misuse attempt. |
 
+### Error Response Design
+
+The granular error codes in the table above (`nonce_not_found`, `nonce_expired`, `nonce_already_used`, etc.) are used **internally** — in server-side audit logs, structured log output, and the `denial_reason` field of audit records. This granularity enables precise incident investigation and replay detection.
+
+The **client-facing response** always uses the generic `nonce_invalid` error code, per the security rationale in 003 Rule 3: distinguishing between "not found," "expired," and "already used" in client responses would allow an attacker to probe the nonce store (e.g., determining whether a nonce existed, whether it's been consumed, or whether timing is the issue).
+
+```json
+{
+  "status": "error",
+  "error_code": "nonce_invalid",
+  "message": "Confirmation nonce is invalid, expired, or already used. Request a new confirmation.",
+  "action": "retry_job"
+}
+```
+
+The audit record for the same event includes the specific internal code:
+
+```json
+{
+  "outcome": "nonce_rejected",
+  "denial_reason": "nonce_expired",
+  "nonce_id": "wnc_a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4",
+  "ttl_exceeded_by_seconds": 14
+}
+```
+
 ---
 
 ## Rate Limit Configuration
@@ -692,6 +718,35 @@ rate_limit: 30/minute
   "retry_after_seconds": 12
 }
 ```
+
+### Global Rate Limits
+
+In addition to per-action, per-caller rate limits, the policy supports **global rate limits** that cap the total throughput across all callers and all actions. This defends against distributed attacks using multiple valid identities (see 005 Threat 9: Rate Limit Bypass).
+
+```yaml
+global_rate_limits:
+  all_mutations: 120/minute
+  all_reads: 600/minute
+```
+
+| Setting | Default | Hard ceiling | Scope |
+|---------|---------|-------------|-------|
+| `all_mutations` | 120/minute | 600/minute | All `mutate` and `mutate_destructive` actions combined |
+| `all_reads` | 600/minute | 3000/minute | All `read` actions combined |
+
+Global rate limits are enforced **in addition to** per-action limits. A request must pass both the per-action rate check and the global rate check. When the global limit is hit:
+
+```json
+{
+  "status": "error",
+  "error_code": "global_rate_limit_exceeded",
+  "limit": "120/minute",
+  "retry_after_seconds": 8,
+  "message": "Global mutation rate limit exceeded. Try again in 8 seconds."
+}
+```
+
+The `global_rate_limits` section is required in the policy file. It is validated at startup alongside per-action limits.
 
 ---
 
@@ -784,6 +839,9 @@ There is no implicit default policy. The operator must define one.
 | Parameter `type` is one of `string`, `integer`, `boolean`, `object` | Server refuses to start |
 | Action `name` matches `^[a-z][a-z0-9_]{0,63}$` | Server refuses to start |
 | Category name matches `^[a-z][a-z0-9_]{0,63}$` | Server refuses to start |
+| `global_rate_limits` section present with `all_mutations` and `all_reads` | Server refuses to start |
+| `global_rate_limits` values match `^\d+/minute$` format | Server refuses to start |
+| `global_rate_limits` values do not exceed their hard ceilings (600/minute for mutations, 3000/minute for reads) | Server refuses to start |
 | At least one action category with at least one action | Warning logged (server starts but nothing is usable) |
 
 ### Validation Error Format
@@ -935,6 +993,10 @@ hard_ceilings:
   max_blast_radius: 1000
   max_nonce_ttl_seconds: 120
   min_nonce_ttl_seconds: 10
+
+global_rate_limits:
+  all_mutations: 120/minute
+  all_reads: 600/minute
 
 action_categories:
   background_jobs:
