@@ -4,6 +4,8 @@
 
 Part of the **[wild ecosystem](https://github.com/intent-solutions-io/wild-rails-ai-ops)** — 10 Ruby gems for running AI agents inside Rails apps under capability control.
 
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/U5S225PTME)
+
 ## Mission
 
 `wild-admin-tools-mcp` provides safe, audited administrative operations for live Rails applications via MCP. It gives AI agents and authorized operators the ability to manage background jobs, cache, and feature flags — with mandatory dry-run previews, two-phase confirmation for destructive actions, before/after audit snapshots, and enforced blast radius caps.
