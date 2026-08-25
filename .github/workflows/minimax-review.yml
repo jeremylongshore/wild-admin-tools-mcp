@@ -19,14 +19,16 @@ name: 'MiniMax Code Review'
 # (bundle exec rspec + bundle exec rubocop on Ruby 3.2 and 3.3), including the
 # 42 adversarial examples under spec/safety/. REVIEW.md at the repo root is the
 # reviewer law; both prompts below are distillations of it for a diff-scoped
-# reviewer (the action fetches the PR diff via the API and never checks out or
-# executes PR code).
+# reviewer. The action fetches the PR diff through the GitHub API and never
+# checks out or executes PR code: verified in the pinned revision, src/index.js
+# line 54 (octokit rest.pulls.listFiles), with no checkout step in action.yml.
 #
 # The action is our maintained fork (jeremylongshore/minimax-code-review),
-# SHA-pinned per supply-chain policy: it adds per-reviewer sticky comments
-# (upstream's fixed marker makes two lanes clobber each other), reasoning-model
-# <think>-stripping (M3), and the opt-in PR-description context the adversarial
-# lane requires.
+# SHA-pinned per supply-chain policy. Its three additions, verified in the pinned
+# revision: per-reviewer sticky comment markers (src/index.js:15-16 and :205,
+# where upstream's fixed marker makes two lanes clobber each other),
+# reasoning-model <think>-stripping for M3 (src/index.js:175-191), and the opt-in
+# PR-description context the adversarial lane requires (src/index.js:206).
 #
 # SAFE-FOR-FORKS design: runs on `pull_request` (NOT pull_request_target), so a
 # forked PR never receives the MINIMAX_API_KEY secret. The same-repo guard below
@@ -113,11 +115,15 @@ jobs:
             nonce confirm twice, a client-supplied nonce, a TTL outside the 10 to
             120 second clamp, and any parameter named like skip_confirmation,
             force or confirm. (3) CONFIRMATION ORACLE LEAKS: NonceManager returns
-            one opaque client_reason of nonce_invalid and keeps the
-            discriminating internal_reason internal, but ResponseFormatter
+            one opaque client_reason of nonce_invalid and reports the
+            discriminating detail separately as internal_reason, but that
+            separation does not hold end to end today: TwoPhaseFlow copies
+            internal_reason into the denial metadata and ResponseFormatter
             denied_hash splats the whole denial metadata into the client
-            response, so any new denial metadata key is client visible; flag
-            anything that tells an attacker which check failed. (4) BLAST RADIUS
+            response, so the discriminating reason already reaches the client and
+            any new denial metadata key is client visible; treat a diff that
+            closes that leak as a fix, and flag anything that tells an attacker
+            which check failed. (4) BLAST RADIUS
             ENFORCED ONLY ONCE: Guard::Pipeline checks the cap at preview AND
             again at confirmation because the affected count can grow between
             phases; flag removal of the second check, a count taken from client
@@ -157,7 +163,11 @@ jobs:
             LIMIT BUCKET SPLITTING: per-caller windows are keyed on caller_id plus
             action_name, so flag identity that becomes client controlled or
             nondeterministic. FAIL CLOSED MEANS: on any uncertainty the request is
-            denied and audited, never allowed and logged. A rescue returning a
+            denied and audited, never allowed and logged, with one verified
+            exception: Guard::Pipeline estimate_count substitutes 1 when a
+            preview returns no estimated_affected, so an unknown blast radius is
+            not denied today; police new mutating actions for a real
+            estimated_affected rather than citing this as the rule. A rescue returning a
             permissive default, an || true, an inverted unless-allowed, or a
             rescue nil on a guard is a fail-open defect even when the tests pass.
             GENERATED OR OPERATOR-OWNED FILES: Gemfile.lock, .beads, vendor/bundle
