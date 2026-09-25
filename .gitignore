@@ -6,7 +6,6 @@
 .beads/
 
 # Ruby / Bundler
-Gemfile.lock
 vendor/bundle/
 .bundle/
 pkg/
