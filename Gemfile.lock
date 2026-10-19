@@ -1,6 +1,6 @@
 GIT
   remote: https://github.com/jeremylongshore/wild-capability-gate
-  revision: 929d95e41838b533eabff65954687a1e72ddbe9b
+  revision: 33a32a8c8e9733064d0c5bbef225cdcfe1754c04
   branch: main
   specs:
     wild-capability-gate (0.1.0)
