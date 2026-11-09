@@ -18,7 +18,7 @@ Gem::Specification.new do |spec|
   spec.require_paths = ['lib']
 
   spec.add_dependency 'activerecord', '>= 7.0', '< 9.0'
-  spec.add_dependency 'mcp', '~> 0.8'
+  spec.add_dependency 'mcp', '>= 0.8', '< 2.0'
   spec.add_dependency 'wild-capability-gate', '~> 0.1'
   spec.add_dependency 'yaml'
 
